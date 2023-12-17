@@ -1,0 +1,10 @@
+[Unit]
+Description=MQTT rules engine
+
+[Service]
+ExecStart=/opt/mqtt-rules-engine/mqtt-rules-engine
+SyslogIdentifier=MqttRulesEngine
+WorkingDirectory=/opt/mqtt-rules-engine/
+
+[Install]
+WantedBy=multi-user.target
