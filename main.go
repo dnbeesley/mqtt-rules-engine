@@ -87,7 +87,7 @@ func main() {
 				panic(err)
 			}
 
-			cmd := exec.Command("C:\\Python311\\python.exe", script.File)
+			cmd := exec.Command(script.Cmd[0], script.Cmd[1:]...)
 
 			cmd.Stderr = os.Stderr
 			cmd.Stdin = bytes.NewReader(inputBytes)

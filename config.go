@@ -17,7 +17,7 @@ type EngineConfig struct {
 }
 
 type ScriptConfig struct {
-	File   string   `json:"file"`
+	Cmd    []string `json:"cmd"`
 	Topics []string `json:"topics"`
 }
 
