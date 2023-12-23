@@ -1,33 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-var channel = make(chan bool)
-var subscribeTopics = map[string][]uint8{}
-
-func checkCondition(condition *Condition) bool {
-	val, found := subscribeTopics[condition.Topic]
-	if !found {
-		return false
-	}
-
-	if len(val) <= condition.Index {
-		return false
-	}
-
-	if condition.Type == BitMatchConditionType {
-		return val[condition.Index]&condition.Value == condition.Value
-	} else if condition.Type == GreaterThanConditionType {
-		return val[condition.Index] > condition.Value
-	}
-
-	return false
-}
+var channel = make(chan string)
+var subscribeTopics = map[string]string{}
 
 var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
 	fmt.Println("Connected")
@@ -38,28 +22,19 @@ var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err
 }
 
 var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
-	var payload = msg.Payload()
-	var state []uint8
-
-	err := json.Unmarshal(payload, &state)
-	if err != nil {
-		fmt.Printf("Error parsing payload: %v\n", err)
-		return
-	}
-
-	subscribeTopics[msg.Topic()] = state
-	channel <- true
+	var payload = string(msg.Payload())
+	subscribeTopics[msg.Topic()] = payload
+	println("Received update to topic:", msg.Topic())
+	channel <- msg.Topic()
 }
 
 func main() {
 	var config EngineConfig
 	getConfig(&config)
 
-	for _, output := range config.Outputs {
-		for _, rule := range output.Rules {
-			for _, condition := range rule.Conditions {
-				subscribeTopics[condition.Topic] = make([]uint8, 0)
-			}
+	for _, script := range config.Scripts {
+		for _, topic := range script.Topics {
+			subscribeTopics[topic] = ""
 		}
 	}
 
@@ -86,28 +61,56 @@ func main() {
 		fmt.Println("Subscribed to topic:", topic)
 	}
 
-	for range channel {
-		for _, output := range config.Outputs {
-			result := output.DefaultValue
-			for _, rule := range output.Rules {
-				matchedAll := true
-				for _, condition := range rule.Conditions {
-					matchedAll = checkCondition(&condition)
-					if !matchedAll {
-						break
-					}
+	for topic := range channel {
+		for _, script := range config.Scripts {
+			match := false
+			input := map[string]string{}
+			for _, scriptTopic := range script.Topics {
+				if subscribeTopics[scriptTopic] == "" {
+					println("Mising data for topic:", scriptTopic)
+					match = false
+					break
 				}
 
-				if matchedAll {
-					result = rule.Result
-					break
+				input[scriptTopic] = subscribeTopics[scriptTopic]
+				if topic == scriptTopic {
+					match = true
 				}
 			}
 
-			if len(result) > 0 {
-				client.Publish(output.Topic, 0, true, result)
-				fmt.Println("Publishing:", result, "to topic:", output.Topic)
+			if !match {
+				continue
+			}
+
+			inputBytes, err := json.Marshal(input)
+			if err != nil {
+				panic(err)
+			}
+
+			cmd := exec.Command("C:\\Python311\\python.exe", script.File)
+
+			cmd.Stderr = os.Stderr
+			cmd.Stdin = bytes.NewReader(inputBytes)
+			var buffer bytes.Buffer
+			cmd.Stdout = &buffer
+
+			err = cmd.Run()
+			if err != nil {
+				panic(err)
+			}
+
+			output := map[string]string{}
+			err = json.Unmarshal(buffer.Bytes(), &output)
+			if err != nil {
+				panic(err)
+			}
+
+			for topic, value := range output {
+				client.Publish(topic, 0, true, value)
+				fmt.Println("Publishing:", value, "to topic:", topic)
 			}
 		}
 	}
+
+	println("Finished reading channel")
 }
