@@ -1,8 +1,8 @@
-'''
-Calcalutes the state of signals based on the state of the motor and points control
-'''
-
 #!/usr/bin/python3
+'''
+Calcalutes the state of signals based on the state of the motor and points
+control
+'''
 
 import json
 import sys
@@ -15,6 +15,7 @@ OUTPUTS = {
         },
         0x2: {
             0x5: "RGRR",
+            0x6: "RYY0",
             0xA: "RRYG"
         }
     },
@@ -25,11 +26,15 @@ OUTPUTS = {
         },
         0x8: {
             0x6: "RRGY",
-            0x9: "GRRR"
+            0x9: "GRRR",
+            0xA: "YR0Y"
         }
     },
     "layout/agent-62/signal": {
-        0x10: {
+        0x14: {
+            0x8: "Y0RR"
+        },
+        0x18: {
             0x8: "G0RR"
         },
         0x60: {
@@ -42,6 +47,7 @@ OUTPUTS = {
         }
     }
 }
+
 
 def main() -> dict[str, str]:
     '''
@@ -58,17 +64,17 @@ def main() -> dict[str, str]:
     if not topic_objects.get('layout/i2c-agent/output/40'):
         return {}
 
-    if len(topic_objects['layout/i2c-agent/output/40']) <2:
+    if len(topic_objects['layout/i2c-agent/output/40']) < 2:
         return {}
 
     points: int = topic_objects['layout/i2c-agent/output/40'][0]
     points += 0x100 * topic_objects['layout/i2c-agent/output/40'][1]
 
     if not topic_objects.get('layout/i2c-agent/output/41'):
-        return{}
+        return {}
 
-    if len(topic_objects['layout/i2c-agent/output/41']) <3:
-        return{}
+    if len(topic_objects['layout/i2c-agent/output/41']) < 3:
+        return {}
 
     motor: int = topic_objects['layout/i2c-agent/output/41'][0]
 
@@ -84,11 +90,12 @@ def main() -> dict[str, str]:
             result[topic] = 'RRRR'
 
     if topic_objects['layout/i2c-agent/output/41'][1] > 0:
-        result['layout/agent-63/signal'] ='ON'
+        result['layout/agent-63/signal'] = 'ON'
     else:
-        result['layout/agent-63/signal'] ='OFF'
+        result['layout/agent-63/signal'] = 'OFF'
 
     return result
+
 
 if __name__ == '__main__':
     print(json.dumps(main()))
