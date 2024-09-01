@@ -46,6 +46,11 @@ def main() -> dict[str, str]:
 
     motor_output: list[int] = topic_objects['layout/i2c-agent/output/41']
 
+    presence_sensor: tuple[dict[bool]] = [
+        topic_objects.get('layout/agent-60/state'),
+        topic_objects.get('layout/agent-61/state')
+    ]
+
     if motor_input[1] > THREASHOLD:
         if (motor_output[0] & 0x4) and (points[0] & 0x2):
             motor_output[0] = 5
@@ -54,10 +59,10 @@ def main() -> dict[str, str]:
             motor_output[0] = 9
             motor_output[1] = motor_output[2]
     elif (motor_input[0] > THREASHOLD) and (motor_output[0] & 0x2):
-        if (points[0] & 0x2):
+        if (points[0] & 0x2) and (presence_sensor[0]["detector0"] is False):
             motor_output[0] = 10
             motor_output[2] = motor_output[1]
-        elif (motor_output[0] & 0x8) and (points[0] & 0x8):
+        elif (points[0] & 0x8) and (presence_sensor[1]["detector1"] is False):
             motor_output[0] = 6
             motor_output[2] = motor_output[1]
 
