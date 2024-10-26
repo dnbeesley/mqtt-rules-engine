@@ -6,6 +6,7 @@ points control
 
 import json
 import sys
+import traceback
 
 THREASHOLD = 5
 
@@ -22,53 +23,45 @@ def main() -> dict[str, str]:
         topic: json.loads(value) for topic, value in topics.items()
     }
 
-    if not topic_objects.get('layout/i2c-agent/input/41'):
-        return {}
+    try:
+        motor_input: list[int] = topic_objects['layout/i2c-agent/input/41']
+        if len(motor_input) < 2:
+            raise Exception('To few elements in motor input')
 
-    if len(topic_objects['layout/i2c-agent/input/41']) < 2:
-        return {}
+        points: list[int] = topic_objects['layout/i2c-agent/output/40']
+        if len(points) < 2:
+            raise Exception('To few elements in points input')
 
-    motor_input: list[int] = topic_objects['layout/i2c-agent/input/41']
+        motor_output: list[int] = topic_objects['layout/i2c-agent/output/41']
+        if len(motor_output) < 3:
+            raise Exception('To few elements in points input')
 
-    if not topic_objects.get('layout/i2c-agent/output/40'):
-        return {}
+        presence_sensor: tuple[dict[bool]] = [
+            topic_objects.get('layout/agent-60/state'),
+            topic_objects.get('layout/agent-61/state')
+        ]
 
-    if len(topic_objects['layout/i2c-agent/output/40']) < 2:
-        return {}
+        if motor_input[1] > THREASHOLD:
+            if (motor_output[0] & 0x4) and (points[0] & 0x2):
+                motor_output[0] = 5
+                motor_output[1] = motor_output[2]
+            elif (motor_output[0] & 0x8) and (points[0] & 0x8):
+                motor_output[0] = 9
+                motor_output[1] = motor_output[2]
+        elif (motor_input[0] > THREASHOLD) and (motor_output[0] & 0x2):
+            if (points[0] & 0x2) and (presence_sensor[0]["detector0"] is False):
+                motor_output[0] = 10
+                motor_output[2] = motor_output[1]
+            elif (points[0] & 0x8) and (presence_sensor[1]["detector1"] is False):
+                motor_output[0] = 6
+                motor_output[2] = motor_output[1]
 
-    points: list[int] = topic_objects['layout/i2c-agent/output/40']
-
-    if not topic_objects.get('layout/i2c-agent/output/41'):
-        return {}
-
-    if len(topic_objects['layout/i2c-agent/output/41']) < 3:
-        return {}
-
-    motor_output: list[int] = topic_objects['layout/i2c-agent/output/41']
-
-    presence_sensor: tuple[dict[bool]] = [
-        topic_objects.get('layout/agent-60/state'),
-        topic_objects.get('layout/agent-61/state')
-    ]
-
-    if motor_input[1] > THREASHOLD:
-        if (motor_output[0] & 0x4) and (points[0] & 0x2):
-            motor_output[0] = 5
-            motor_output[1] = motor_output[2]
-        elif (motor_output[0] & 0x8) and (points[0] & 0x8):
-            motor_output[0] = 9
-            motor_output[1] = motor_output[2]
-    elif (motor_input[0] > THREASHOLD) and (motor_output[0] & 0x2):
-        if (points[0] & 0x2) and (presence_sensor[0]["detector0"] is False):
-            motor_output[0] = 10
-            motor_output[2] = motor_output[1]
-        elif (points[0] & 0x8) and (presence_sensor[1]["detector1"] is False):
-            motor_output[0] = 6
-            motor_output[2] = motor_output[1]
-
-    result_str = json.dumps(motor_output)
-    if result_str != topics['layout/i2c-agent/output/41']:
-        result['layout/i2c-agent/output/41'] = result_str
+        result_str = json.dumps(motor_output)
+        if result_str != topics['layout/i2c-agent/output/41']:
+            result['layout/i2c-agent/output/41'] = result_str
+    except Exception:
+        traceback.print_exc()
+        result = {}
 
     return result
 

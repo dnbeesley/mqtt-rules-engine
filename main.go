@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
@@ -63,22 +64,23 @@ func main() {
 
 	for topic := range channel {
 		for _, script := range config.Scripts {
-			match := false
+			if !slices.Contains(script.Topics, topic) {
+				continue
+			}
+
 			input := map[string]string{}
+			ok := true
 			for _, scriptTopic := range script.Topics {
-				if subscribeTopics[scriptTopic] == "" {
+				value, ok := subscribeTopics[scriptTopic]
+				if !ok {
 					println("Mising data for topic:", scriptTopic)
-					match = false
 					break
 				}
 
-				input[scriptTopic] = subscribeTopics[scriptTopic]
-				if topic == scriptTopic {
-					match = true
-				}
+				input[scriptTopic] = value
 			}
 
-			if !match {
+			if !ok {
 				continue
 			}
 
