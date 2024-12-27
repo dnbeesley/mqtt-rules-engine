@@ -72,7 +72,7 @@ func main() {
 			ok := true
 			for _, scriptTopic := range script.Topics {
 				value, ok := subscribeTopics[scriptTopic]
-				if !ok {
+				if !ok || value == "" {
 					println("Mising data for topic:", scriptTopic)
 					break
 				}

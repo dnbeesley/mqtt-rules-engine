@@ -16,14 +16,14 @@ def main() -> dict[str, str]:
     Main subroutine. Returns signal output state
     '''
 
-    result: dict[str, str] = {}
-    topics: dict[str, str] = json.load(sys.stdin)
-
-    topic_objects = {
-        topic: json.loads(value) for topic, value in topics.items()
-    }
-
     try:
+        result: dict[str, str] = {}
+        topics: dict[str, str] = json.load(sys.stdin)
+
+        topic_objects = {
+            topic: json.loads(value) for topic, value in topics.items()
+        }
+
         motor_input: list[int] = topic_objects['layout/i2c-agent/input/41']
         if len(motor_input) < 2:
             raise Exception('To few elements in motor input')
@@ -61,6 +61,7 @@ def main() -> dict[str, str]:
             result['layout/i2c-agent/output/41'] = result_str
     except Exception:
         traceback.print_exc()
+        print(str(topics), file=sys.stderr)
         result = {}
 
     return result
