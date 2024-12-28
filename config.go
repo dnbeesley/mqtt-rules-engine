@@ -29,7 +29,7 @@ type ServerConfig struct {
 
 func getConfig(config *EngineConfig) {
 	var buffer = make([]byte, 65536)
-	dataPath := os.Getenv("DATA_DIR")
+	dataPath := os.Getenv("CONFIG_DIR")
 
 	var configPath = "config.json"
 	if dataPath != "" {

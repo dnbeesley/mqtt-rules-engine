@@ -10,5 +10,5 @@ RUN go build .
 FROM golang:1.22-alpine3.21
 RUN mkdir /app
 COPY --from=build /app/mqtt-rules-engine /app
-ENV DATA-DIR=/data
+ENV CONFIG_DIR=/config
 CMD [ "/app/mqtt-rules-engine" ]
