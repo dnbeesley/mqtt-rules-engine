@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"os"
-	"path"
 )
 
 type AuthConfig struct {
@@ -29,14 +28,7 @@ type ServerConfig struct {
 
 func getConfig(config *EngineConfig) {
 	var buffer = make([]byte, 65536)
-	dataPath := os.Getenv("CONFIG_DIR")
-
-	var configPath = "config.json"
-	if dataPath != "" {
-		configPath = path.Join(dataPath, configPath)
-	}
-
-	file, err := os.Open(configPath)
+	file, err := os.Open("config.json")
 	if err != nil {
 		panic(err)
 	}
