@@ -20,6 +20,7 @@ var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
 
 var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
 	fmt.Printf("Connect lost: %v\n", err)
+	close(channel)
 }
 
 var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
@@ -27,6 +28,27 @@ var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Me
 	subscribeTopics[msg.Topic()] = payload
 	println("Received update to topic:", msg.Topic())
 	channel <- msg.Topic()
+}
+
+func generateInput(script *ScriptConfig) (input map[string]string, ok bool) {
+	input = map[string]string{}
+	ok = true
+	value := ""
+	for _, scriptTopic := range script.Topics {
+		value, ok = subscribeTopics[scriptTopic]
+		if value == "" {
+			ok = false
+		}
+
+		if !ok {
+			fmt.Println("Mising data for topic:", scriptTopic)
+			break
+		}
+
+		input[scriptTopic] = value
+	}
+
+	return input, ok
 }
 
 func main() {
@@ -68,24 +90,12 @@ func main() {
 				continue
 			}
 
-			input := map[string]string{}
-			ok := true
-			for _, scriptTopic := range script.Topics {
-				value, ok := subscribeTopics[scriptTopic]
-				if value == "" {
-					ok = false
-				}
-
-				if !ok {
-					println("Mising data for topic:", scriptTopic)
-					break
-				}
-
-				input[scriptTopic] = value
-			}
-
+			input, ok := generateInput(&script)
 			if !ok {
+				fmt.Println("Not enough data to run:", script.Cmd)
 				continue
+			} else {
+				fmt.Println("Runing:", script.Cmd)
 			}
 
 			inputBytes, err := json.Marshal(input)
