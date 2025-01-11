@@ -95,7 +95,7 @@ func main() {
 				fmt.Println("Not enough data to run:", script.Cmd)
 				continue
 			} else {
-				fmt.Println("Runing:", script.Cmd)
+				fmt.Println("Running:", script.Cmd)
 			}
 
 			inputBytes, err := json.Marshal(input)
